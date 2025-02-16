@@ -35,7 +35,7 @@ public class JoinAndFilterPersons {
             // HQL query to join Person with Address and filter by city
             String hql = "FROM Person p JOIN p.addressEntity a WHERE a.city = :city";
             Query<Person> query = session.createQuery(hql, Person.class);
-            query.setParameter("city", "New York");
+            query.setParameter("city", "Noida");
 
             // Execute the query and get the filtered list of persons
             List<Person> filteredPersons = query.list();
