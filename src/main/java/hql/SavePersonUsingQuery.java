@@ -8,6 +8,9 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.query.MutationQuery;
 import org.hibernate.service.ServiceRegistry;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SavePersonUsingQuery {
 
     public static void main(String[] args) {
@@ -25,31 +28,46 @@ public class SavePersonUsingQuery {
         try (Session session = sessionFactory.openSession()) {
             Transaction transaction = session.beginTransaction();
 
-            // Create an Address object
-            Address address = new Address();
-            address.setCity("New York");
-            address.setStreet("1234 Elm Street");
+            // Multiple address data
+            String[][] addressData = {
+                {"Noida", "sector 21"},
+                {"Delhi", "Laxminagar"},
+                {"Gurugram", "DLF"}
+            };
 
-            // Save the Address using an HQL INSERT query
-            String insertAddressHql = "INSERT INTO Address (city, street) VALUES (:city, :street)";
-            MutationQuery addressQuery = session.createMutationQuery(insertAddressHql);
-            addressQuery.setParameter("city", address.getCity());
-            addressQuery.setParameter("street", address.getStreet());
-            int addressResult = addressQuery.executeUpdate();
-            System.out.println(addressResult + " Address record inserted.");
+            List<Integer> addressIds = new ArrayList<>();
 
-            // Create a Person object
-            Person person = new Person();
-            person.setName("John Doe");
-            person.setAddressEntity(address); // Associate the Address object with the Person
+            // Insert multiple addresses using HQL
+            for (String[] address : addressData) {
+                String insertAddressHql = "INSERT INTO Address (city, street) VALUES (:city, :street)";
+                MutationQuery addressQuery = session.createMutationQuery(insertAddressHql);
+                addressQuery.setParameter("city", address[0]);
+                addressQuery.setParameter("street", address[1]);
+                addressQuery.executeUpdate();
 
-            // Save the Person using an HQL INSERT query
-            String insertPersonHql = "INSERT INTO Person (name, addressEntity) VALUES (:name, :address)";
-            MutationQuery personQuery = session.createMutationQuery(insertPersonHql);
-            personQuery.setParameter("name", person.getName());
-            personQuery.setParameter("address", address); // Pass the associated Address object
-            int personResult = personQuery.executeUpdate();
-            System.out.println(personResult + " Person record inserted.");
+                // Fetch the generated Address ID
+                String selectAddressIdHql = "SELECT id FROM Address WHERE city = :city AND street = :street";
+                Integer addressId = session.createQuery(selectAddressIdHql, Integer.class)
+                                           .setParameter("city", address[0])
+                                           .setParameter("street", address[1])
+                                           .setMaxResults(1)
+                                           .uniqueResult();
+                addressIds.add(addressId);
+                System.out.println("Address saved with ID: " + addressId);
+            }
+
+            // Multiple person data
+            String[] personNames = {"Amit", "Sumit", "Namit"};
+
+            // Insert multiple persons using HQL, linking them to addresses
+            for (int i = 0; i < personNames.length; i++) {
+                String insertPersonHql = "INSERT INTO Person (name, addressEntity) VALUES (:name, :addressId)";
+                MutationQuery personQuery = session.createMutationQuery(insertPersonHql);
+                personQuery.setParameter("name", personNames[i]);
+                personQuery.setParameter("addressId", addressIds.get(i)); // Assign each person a different address
+                int personResult = personQuery.executeUpdate();
+                System.out.println(personResult + " Person record inserted: " + personNames[i]);
+            }
 
             transaction.commit();
         } catch (Exception e) {
